@@ -16,7 +16,25 @@ router.get('/', verifyToken, async (req, res) => {
   }
 });
 
-// POST /api/chats/privado - crear o abrir chat privado
+// GET /api/chats/buscar-grupos - grupos donde el usuario NO es participante
+router.get('/buscar-grupos', verifyToken, async (req, res) => {
+  try {
+    const { q = '' } = req.query;
+    const query = {
+      tipo: 'grupo',
+      participantes: { $ne: req.user.id },
+    };
+    if (q.trim()) query.nombre = { $regex: q.trim(), $options: 'i' };
+    const grupos = await Chat.find(query)
+      .populate('participantes', 'nombre')
+      .select('nombre participantes')
+      .limit(20);
+    res.json(grupos);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // POST /api/chats/privado - crear o abrir chat privado
 
 router.post('/privado', verifyToken, async (req, res) => {
@@ -50,25 +68,6 @@ router.post('/grupo', verifyToken, async (req, res) => {
     });
     const populated = await chat.populate('participantes', 'nombre avatar email');
     res.status(201).json(populated);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
-
-// GET /api/chats/buscar-grupos - grupos donde el usuario NO es participante
-router.get('/buscar-grupos', verifyToken, async (req, res) => {
-  try {
-    const { q = '' } = req.query;
-    const query = {
-      tipo: 'grupo',
-      participantes: { $ne: req.user.id },
-    };
-    if (q.trim()) query.nombre = { $regex: q.trim(), $options: 'i' };
-    const grupos = await Chat.find(query)
-      .populate('participantes', 'nombre')
-      .select('nombre participantes')
-      .limit(20);
-    res.json(grupos);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
