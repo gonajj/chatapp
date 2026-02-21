@@ -17,6 +17,8 @@ router.get('/', verifyToken, async (req, res) => {
 });
 
 // POST /api/chats/privado - crear o abrir chat privado
+// POST /api/chats/privado - crear o abrir chat privado
+
 router.post('/privado', verifyToken, async (req, res) => {
   try {
     const { userId } = req.body;

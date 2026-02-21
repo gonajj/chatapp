@@ -195,6 +195,7 @@ function JoinGroupModal({ onClose, onGroupJoined }) {
     </div>
   );
 }
+// ============ MAIN PAGE ============
 
 // ============ MAIN PAGE ============
 export default function ChatPage() {
