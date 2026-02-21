@@ -53,4 +53,41 @@ router.post('/grupo', verifyToken, async (req, res) => {
   }
 });
 
+// GET /api/chats/buscar-grupos - grupos donde el usuario NO es participante
+router.get('/buscar-grupos', verifyToken, async (req, res) => {
+  try {
+    const { q = '' } = req.query;
+    const query = {
+      tipo: 'grupo',
+      participantes: { $ne: req.user.id },
+    };
+    if (q.trim()) query.nombre = { $regex: q.trim(), $options: 'i' };
+    const grupos = await Chat.find(query)
+      .populate('participantes', 'nombre')
+      .select('nombre participantes')
+      .limit(20);
+    res.json(grupos);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// POST /api/chats/unirse/:chatId - unirse a un grupo
+router.post('/unirse/:chatId', verifyToken, async (req, res) => {
+  try {
+    const chat = await Chat.findOneAndUpdate(
+      { _id: req.params.chatId, tipo: 'grupo' },
+      { $addToSet: { participantes: req.user.id } },
+      { new: true }
+    )
+      .populate('participantes', 'nombre avatar email')
+      .populate({ path: 'ultimoMensaje', populate: { path: 'remitente', select: 'nombre' } });
+
+    if (!chat) return res.status(404).json({ message: 'Grupo no encontrado' });
+    res.json(chat);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 module.exports = router;

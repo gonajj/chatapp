@@ -39,13 +39,13 @@ function NewChatModal({ onClose, onChatCreated }) {
         <input className="form-input" placeholder="Buscar por nombre o email..."
           value={query} onChange={e => setQuery(e.target.value)} autoFocus />
         <div className="user-search-results">
-          {loading && <div style={{color:'var(--text-muted)',fontSize:13}}>Buscando...</div>}
+          {loading && <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Buscando...</div>}
           {results.map(u => (
             <div key={u._id} className="user-result" onClick={() => startChat(u._id)}>
-              <div className="avatar" style={{width:32,height:32,fontSize:14}}>{u.nombre[0].toUpperCase()}</div>
+              <div className="avatar" style={{ width: 32, height: 32, fontSize: 14 }}>{u.nombre[0].toUpperCase()}</div>
               <div>
-                <div style={{fontWeight:500}}>{u.nombre}</div>
-                <div style={{fontSize:11,color:'var(--text-muted)'}}>{u.email}</div>
+                <div style={{ fontWeight: 500 }}>{u.nombre}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{u.email}</div>
               </div>
             </div>
           ))}
@@ -105,20 +105,20 @@ function NewGroupModal({ onClose, onGroupCreated }) {
             value={query} onChange={e => setQuery(e.target.value)} />
         </div>
         {selected.length > 0 && (
-          <div style={{display:'flex',flexWrap:'wrap',gap:6,marginBottom:12}}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
             {selected.map(u => (
-              <span key={u._id} style={{background:'var(--accent-dim)',color:'var(--accent)',padding:'3px 10px',borderRadius:20,fontSize:12,cursor:'pointer'}}
+              <span key={u._id} style={{ background: 'var(--accent-dim)', color: 'var(--accent)', padding: '3px 10px', borderRadius: 20, fontSize: 12, cursor: 'pointer' }}
                 onClick={() => toggle(u)}>{u.nombre} ✕</span>
             ))}
           </div>
         )}
         <div className="user-search-results">
           {results.map(u => (
-            <div key={u._id} className={`user-result ${selected.find(s=>s._id===u._id)?'selected':''}`}
+            <div key={u._id} className={`user-result ${selected.find(s => s._id === u._id) ? 'selected' : ''}`}
               onClick={() => toggle(u)}>
-              <div className="avatar" style={{width:32,height:32,fontSize:14}}>{u.nombre[0].toUpperCase()}</div>
+              <div className="avatar" style={{ width: 32, height: 32, fontSize: 14 }}>{u.nombre[0].toUpperCase()}</div>
               <span>{u.nombre}</span>
-              {selected.find(s=>s._id===u._id) && <span style={{marginLeft:'auto',color:'var(--accent)'}}>✓</span>}
+              {selected.find(s => s._id === u._id) && <span style={{ marginLeft: 'auto', color: 'var(--accent)' }}>✓</span>}
             </div>
           ))}
         </div>
@@ -127,6 +127,69 @@ function NewGroupModal({ onClose, onGroupCreated }) {
           <button className="btn-accent" onClick={create} disabled={!nombre.trim() || selected.length === 0}>
             Crear Grupo
           </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function JoinGroupModal({ onClose, onGroupJoined }) {
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [joining, setJoining] = useState(null);
+
+  const search = async (q) => {
+    setLoading(true);
+    try {
+      const { data } = await axios.get(`${API}/api/chats/buscar-grupos?q=${encodeURIComponent(q)}`);
+      setResults(data);
+    } finally { setLoading(false); }
+  };
+
+  useEffect(() => {
+    const t = setTimeout(() => search(query), 400);
+    return () => clearTimeout(t);
+  }, [query]);
+
+  const join = async (chatId) => {
+    setJoining(chatId);
+    try {
+      const { data } = await axios.post(`${API}/api/chats/unirse/${chatId}`);
+      onGroupJoined(data);
+      onClose();
+    } finally { setJoining(null); }
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-box" onClick={e => e.stopPropagation()}>
+        <h3 className="modal-title">🔎 Buscar Grupos</h3>
+        <input className="form-input" placeholder="Buscar grupos por nombre..."
+          value={query} onChange={e => setQuery(e.target.value)} autoFocus />
+        <div className="user-search-results">
+          {loading && <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Buscando...</div>}
+          {!loading && results.length === 0 && query && (
+            <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Sin resultados</div>
+          )}
+          {results.map(g => (
+            <div key={g._id} className="user-result" style={{ justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div className="avatar" style={{ width: 32, height: 32, fontSize: 14 }}>{g.nombre[0].toUpperCase()}</div>
+                <div>
+                  <div style={{ fontWeight: 500 }}>{g.nombre}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{g.participantes.length} participantes</div>
+                </div>
+              </div>
+              <button className="btn-accent" style={{ fontSize: 12, padding: '4px 12px' }}
+                onClick={() => join(g._id)} disabled={joining === g._id}>
+                {joining === g._id ? '...' : 'Unirse'}
+              </button>
+            </div>
+          ))}
+        </div>
+        <div className="modal-actions">
+          <button className="btn-secondary" onClick={onClose}>Cerrar</button>
         </div>
       </div>
     </div>
@@ -145,6 +208,7 @@ export default function ChatPage() {
   const [showNewChat, setShowNewChat] = useState(false);
   const [showNewGroup, setShowNewGroup] = useState(false);
   const [sending, setSending] = useState(false);
+  const [showJoinGroup, setShowJoinGroup] = useState(false);
   const messagesEndRef = useRef(null);
   const typingTimeout = useRef(null);
   const fileInputRef = useRef(null);
@@ -163,7 +227,7 @@ export default function ChatPage() {
         if (prev.find(m => m._id === msg._id)) return prev;
         return [...prev, msg];
       });
-      setChats(prev => prev.map(c => c._id === msg.chatId ? {...c, ultimoMensaje: msg} : c));
+      setChats(prev => prev.map(c => c._id === msg.chatId ? { ...c, ultimoMensaje: msg } : c));
     });
 
     socket.on('user_typing', ({ chatId, userName }) => {
@@ -193,7 +257,8 @@ export default function ChatPage() {
 
   const getChatName = (chat) => {
     if (chat.tipo === 'grupo') return chat.nombre;
-    const other = chat.participantes.find(p => p._id !== user.id);
+    const userId = String(user.id || user._id);
+    const other = chat.participantes.find(p => String(p._id) !== userId);
     return other?.nombre || 'Chat';
   };
 
@@ -201,8 +266,9 @@ export default function ChatPage() {
 
   const isOnline = (chat) => {
     if (chat.tipo === 'grupo') return false;
-    const other = chat.participantes.find(p => p._id !== user.id);
-    return onlineUsers.includes(other?._id);
+    const userId = String(user.id || user._id);
+    const other = chat.participantes.find(p => String(p._id) !== userId);
+    return onlineUsers.includes(String(other?._id));
   };
 
   const getPreview = (chat) => {
@@ -230,7 +296,7 @@ export default function ChatPage() {
       });
       socket?.emit('send_message', { ...data, chatId: activeChat._id });
       setMessages(prev => [...prev, data]);
-      setChats(prev => prev.map(c => c._id === activeChat._id ? {...c, ultimoMensaje: data} : c));
+      setChats(prev => prev.map(c => c._id === activeChat._id ? { ...c, ultimoMensaje: data } : c));
       setInput('');
     } finally { setSending(false); }
   };
@@ -269,7 +335,8 @@ export default function ChatPage() {
       <aside className="sidebar">
         <div className="sidebar-header">
           <span className="sidebar-title">ChatApp</span>
-          <div style={{display:'flex',gap:6}}>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button className="icon-btn" onClick={() => setShowJoinGroup(true)} title="Buscar grupos">🔎</button>
             <button className="icon-btn" onClick={() => setShowNewGroup(true)} title="Nuevo grupo">👥</button>
             <button className="icon-btn" onClick={() => setShowNewChat(true)} title="Nuevo chat">✏️</button>
           </div>
@@ -281,8 +348,8 @@ export default function ChatPage() {
 
         <div className="chat-list">
           {chats.length === 0 && (
-            <div style={{padding:24,textAlign:'center',color:'var(--text-muted)',fontSize:14}}>
-              No tienes chats aún.<br/>¡Empieza uno nuevo!
+            <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-muted)', fontSize: 14 }}>
+              No tienes chats aún.<br />¡Empieza uno nuevo!
             </div>
           )}
           {chats.map(chat => (
@@ -303,7 +370,7 @@ export default function ChatPage() {
         </div>
 
         <div className="sidebar-footer">
-          <div className="avatar" style={{width:34,height:34,fontSize:14}}>{user?.nombre[0]?.toUpperCase()}</div>
+          <div className="avatar" style={{ width: 34, height: 34, fontSize: 14 }}>{user?.nombre[0]?.toUpperCase()}</div>
           <span className="user-name">{user?.nombre}</span>
           <button className="btn-logout" onClick={logout}>Salir</button>
         </div>
@@ -315,7 +382,7 @@ export default function ChatPage() {
           <div className="chat-empty">
             <div className="chat-empty-icon">💬</div>
             <div className="chat-empty-text">Selecciona un chat</div>
-            <div style={{fontSize:13,color:'var(--text-muted)'}}>o inicia una nueva conversación</div>
+            <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>o inicia una nueva conversación</div>
           </div>
         ) : (
           <>
@@ -335,8 +402,9 @@ export default function ChatPage() {
 
             <div className="messages-container">
               {messages.map((msg, i) => {
-                const isOut = msg.remitente._id === user.id || msg.remitente === user.id;
-                const senderId = msg.remitente._id || msg.remitente;
+                const senderId = (msg.remitente?._id || msg.remitente)?.toString();
+                const myId = (user.id || user._id)?.toString();
+                const isOut = senderId === myId;
                 const senderName = msg.remitente?.nombre || '';
                 const showName = !isOut && activeChat.tipo === 'grupo';
                 return (
@@ -345,7 +413,7 @@ export default function ChatPage() {
                       {showName && <div className="msg-sender-name">{senderName}</div>}
                       {msg.tipo === 'imagen'
                         ? <img src={msg.archivoUrl} alt="img" className="msg-image"
-                            onClick={() => window.open(msg.archivoUrl, '_blank')} />
+                          onClick={() => window.open(msg.archivoUrl, '_blank')} />
                         : <span>{msg.contenido}</span>
                       }
                       <div className="msg-time">{format(msg.createdAt || new Date(), 'es')}</div>
@@ -359,7 +427,7 @@ export default function ChatPage() {
             <div className="typing-indicator">{typing}</div>
 
             <div className="chat-input-area">
-              <input type="file" accept="image/*" ref={fileInputRef} style={{display:'none'}} onChange={sendImage} />
+              <input type="file" accept="image/*" ref={fileInputRef} style={{ display: 'none' }} onChange={sendImage} />
               <button className="img-btn" onClick={() => fileInputRef.current?.click()} title="Enviar imagen">📷</button>
               <textarea className="msg-input" rows={1} placeholder="Escribe un mensaje..."
                 value={input}
@@ -373,6 +441,7 @@ export default function ChatPage() {
 
       {showNewChat && <NewChatModal onClose={() => setShowNewChat(false)} onChatCreated={handleChatCreated} />}
       {showNewGroup && <NewGroupModal onClose={() => setShowNewGroup(false)} onGroupCreated={handleChatCreated} />}
+      {showJoinGroup && <JoinGroupModal onClose={() => setShowJoinGroup(false)} onGroupJoined={handleChatCreated} />}
     </div>
   );
 }
