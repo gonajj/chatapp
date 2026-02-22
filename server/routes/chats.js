@@ -35,7 +35,7 @@ router.get('/buscar-grupos', verifyToken, async (req, res) => {
   }
 });
 
-// POST /api/chats/privado - crear o abrir chat privado
+// POST /api/chats/privado - crear o abrir chat privados
 
 router.post('/privado', verifyToken, async (req, res) => {
   try {
